@@ -1,0 +1,128 @@
+import { StyleSheet } from "react-native";
+
+export const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: "#121212",
+    },
+    center: {
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    header: {
+        padding: 20,
+        backgroundColor: "#8B0000",
+        borderBottomWidth: 1,
+        borderBottomColor: "#333",
+    },
+    welcomeText: {
+        fontSize: 24,
+        fontWeight: "bold",
+        color: "#FFF",
+    },
+    matchdayContainer: {
+        flex: 1,
+        backgroundColor: "#1A1A1A",
+        margin: 10,
+        borderRadius: 10,
+        padding: 15,
+        shadowColor: "#8B0000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    matchdayHeader: {
+        fontSize: 22,
+        fontWeight: "bold",
+        color: "#FFF",
+        marginBottom: 5,
+        textTransform: "uppercase",
+    },
+    matchdayDate: {
+        fontSize: 16,
+        color: "#8B0000",
+        marginBottom: 15,
+        fontWeight: "600",
+    },
+    matchesScroll: {
+        flex: 1,
+    },
+    matchCard: {
+        backgroundColor: "#252525",
+        borderRadius: 8,
+        padding: 15,
+        marginBottom: 15,
+        borderLeftWidth: 4,
+        borderLeftColor: "#8B0000",
+    },
+    teamVsTimeContainer: {
+        flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 5,
+    },
+    teamName: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#FFF",
+        flex: 1,
+        textAlign: "center",
+    },
+    matchTimeBetweenTeams: {
+        fontSize: 14,
+        color: "#8B0000",
+        fontWeight: "bold",
+        marginHorizontal: 8,
+        width: 70,
+        textAlign: "center",
+    },
+    stadiumContainer: {
+        borderTopWidth: 1,
+        borderTopColor: "#333",
+        paddingTop: 8,
+        marginTop: 8,
+    },
+    stadiumText: {
+        fontSize: 12,
+        color: "#AAA",
+        textAlign: "center",
+        fontStyle: "italic",
+    },
+    viewAllButton: {
+        backgroundColor: "#8B0000",
+        padding: 12,
+        borderRadius: 8,
+        alignItems: "center",
+        marginTop: 15,
+    },
+    viewAllText: {
+        color: "#FFF",
+        fontWeight: "bold",
+        fontSize: 16,
+    },
+    footer: {
+        flexDirection: "row",
+        justifyContent: "space-around",
+        padding: 15,
+        backgroundColor: "#1A1A1A",
+        borderTopWidth: 1,
+        borderTopColor: "#333",
+    },
+    footerLinkText: {
+        color: "#FFF",
+        fontSize: 16,
+    },
+    noMatchesText: {
+        color: "#AAA",
+        textAlign: "center",
+        marginTop: 20,
+        fontSize: 16,
+    },
+    errorText: {
+        color: "#FF3333",
+        fontSize: 16,
+        textAlign: "center",
+        padding: 20,
+    },
+});

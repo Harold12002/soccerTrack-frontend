@@ -1,46 +1,58 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Picker } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import axios from 'axios';
 import { useRouter } from 'expo-router';
+import { styles } from './styles/StartUpStyles.js';
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 export default function StartUp() {
   const router = useRouter();
+
+  const BASE_URL = 'http://10.250.7.6:8000';
 
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [signupUsername, setSignupUsername] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
-  const [signupTeam, setSignupTeam] = useState(''); // 
+  const [signupTeam, setSignupTeam] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [activeTab, setActiveTab] = useState('login');
 
-  const handleLoginSubmit = async () => {
-    if (!loginUsername || !loginPassword) {
-      Alert.alert('Error', 'All fields are required.');
-      return;
-    }
-    try {
-      const res = await axios.post('/login', {
-        username: loginUsername,
-        password: loginPassword,
-      });
-      const { token } = res.data;
-      Alert.alert('Success', 'Login successful!');
-      setTimeout(() => {
-        router.replace('/home');
-      }, 800);
-    } catch (err) {
-      Alert.alert('Error', 'Invalid Credentials');
-    }
-  };
 
+
+const handleLoginSubmit = async () => {
+  if (!loginUsername || !loginPassword) {
+    Alert.alert('Error', 'All fields are required.');
+    return;
+  }
+  try {
+    const res = await axios.post(`${BASE_URL}/login`, {
+      username: loginUsername,
+      password: loginPassword,
+    });
+    
+    const { token } = res.data;
+    
+    // Store the token securely
+    await AsyncStorage.setItem('jwtToken', token);
+    
+    Alert.alert('Success', 'Login successful!');
+    
+    // Immediate navigation without setTimeout
+    router.replace('/home');
+    
+  } catch (err) {
+    console.error('Login error:', err);
+    Alert.alert('Error', err.response?.data?.message || 'Invalid Credentials');
+  }
+};
   const handleSignupSubmit = async () => {
     if (!signupUsername || !signupEmail || !signupTeam || !signupPassword) {
       Alert.alert('Error', 'All fields are required.');
       return;
     }
     try {
-      const res = await axios.post('/register', {
+      const res = await axios.post(`${BASE_URL}/register`, {
         username: signupUsername,
         email: signupEmail,
         password: signupPassword,
@@ -59,6 +71,9 @@ export default function StartUp() {
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
+        {/* League Title */}
+        <Text style={styles.leagueTitle}>Castle Lager Premier Soccer League</Text>
+        
         {/* Tab Selector */}
         <View style={styles.tabContainer}>
           <TouchableOpacity 
@@ -119,16 +134,13 @@ export default function StartUp() {
               onChangeText={setSignupEmail}
               keyboardType="email-address"
             />
-      
-              <TextInput
+            <TextInput
               style={styles.input}
-              placeholder='Team'
-              placeholderTextColor={'#999'}
-                value={signupTeam}
-                onChange={setSignupTeam}
-                keyboardType='team'
-                />
-         
+              placeholder="Team"
+              placeholderTextColor="#999"
+              value={signupTeam}
+              onChangeText={setSignupTeam}
+            />
             <TextInput
               style={styles.input}
               placeholder="Password"
@@ -146,89 +158,3 @@ export default function StartUp() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f8f8',
-    paddingHorizontal: 20,
-    paddingTop: 30,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    marginBottom: 20,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 15,
-    alignItems: 'center',
-  },
-  activeTab: {
-    backgroundColor: '#d32f2f',
-  },
-  tabText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-  },
-  activeTabText: {
-    color: '#fff',
-  },
-  formContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  heading: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#d32f2f',
-    marginBottom: 25,
-    textAlign: 'center',
-  },
-  input: {
-    height: 50,
-    borderColor: '#e0e0e0',
-    borderWidth: 1,
-    marginBottom: 15,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    fontSize: 16,
-    backgroundColor: '#fafafa',
-  },
-  pickerContainer: {
-    height: 50,
-    borderColor: '#e0e0e0',
-    borderWidth: 1,
-    marginBottom: 15,
-    borderRadius: 8,
-    backgroundColor: '#fafafa',
-    justifyContent: 'center',
-  },
-  picker: {
-    width: '100%',
-  },
-  button: {
-    backgroundColor: '#d32f2f',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});
