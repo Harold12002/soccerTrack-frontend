@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'rea
 import axios from 'axios';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialIcons } from '@expo/vector-icons';
 import { styles } from './styles/ResultsStyles.js'; 
 
 export default function Results() {
@@ -27,20 +28,33 @@ export default function Results() {
                     axios.get(`${BASE_URL}/user`, {
                         headers: { Authorization: `Bearer ${token}` },
                     }),
-                    axios.get(`${BASE_URL}/all-results`, {
+                    axios.get(`${BASE_URL}/results-with-stats`, {
                         headers: { Authorization: `Bearer ${token}` },
                     })
                 ]);
 
                 setUser(userResponse.data);
-                setMatches(matchesResponse.data?.results || []);
+                
+                // Safely process matches data
+                const processedMatches = (matchesResponse.data?.results || []).map(match => ({
+                    ...match,
+                    statistics: Array.isArray(match.statistics) ? match.statistics : [],
+                    home_team_name: match.home_team_name || 'Unknown Team',
+                    away_team_name: match.away_team_name || 'Unknown Team',
+                    home_goals: match.home_goals ?? 0,
+                    away_goals: match.away_goals ?? 0,
+                    match_date: match.match_date || new Date().toISOString()
+                }));
+                
+                setMatches(processedMatches);
                 setLoading(false);
             } catch (error) {
+                console.error('Fetch error:', error);
                 if (error.response?.status === 401) {
                     await AsyncStorage.removeItem('jwtToken');
                     router.replace('/');
                 } else {
-                    setError(error.response?.data?.message || error.message);
+                    setError(error.response?.data?.message || error.message || 'Failed to load data');
                 }
                 setLoading(false);
             }
@@ -49,14 +63,79 @@ export default function Results() {
         fetchData();
     }, []);
 
+    const renderEventIcon = (eventType) => {
+        switch(eventType) {
+            case 'goal': return <MaterialIcons name="sports-soccer" size={16} color="green" />;
+            case 'yellow_card': return <MaterialIcons name="warning" size={16} color="yellow" />;
+            case 'red_card': return <MaterialIcons name="warning" size={16} color="red" />;
+            case 'substitution': return <MaterialIcons name="swap-horiz" size={16} color="blue" />;
+            case 'assist': return <MaterialIcons name="play-circle-outline" size={16} color="orange" />;
+            default: return <MaterialIcons name="event" size={16} color="gray" />;
+        }
+    };
+
     const handleShowMore = () => {
-        setVisibleMatches((prev) => prev + 10);
+        setVisibleMatches(prev => Math.min(prev + 10, matches.length));
     };
 
     const handleMatchPress = (match) => {
-        router.push({
-            pathname: '/match-details',
-            params: { match: JSON.stringify(match) }
+        try {
+            // Create a safe match data object
+            const matchData = {
+                id: match.id,
+                home_team_name: match.home_team_name,
+                away_team_name: match.away_team_name,
+                home_goals: match.home_goals,
+                away_goals: match.away_goals,
+                match_date: match.match_date,
+                statistics: match.statistics.map(stat => ({
+                    ...stat,
+                    player_name: stat.player_name || 'Unknown Player',
+                    minute: stat.minute || 0
+                }))
+            };
+
+            router.push({
+                pathname: '/match-details',
+                params: { 
+                    matchId: String(match.id),
+                    matchData: JSON.stringify(matchData)
+                }
+            });
+        } catch (err) {
+            console.error('Navigation error:', err);
+            alert('Failed to load match details');
+        }
+    };
+
+    const formatMatchEvents = (stats) => {
+        if (!Array.isArray(stats)) return [];
+        
+        return stats.map(stat => {
+            const minute = stat.minute ? `${stat.minute}'` : '';
+            const player = stat.player_name || 'Unknown Player';
+            
+            switch(stat.event_type) {
+                case 'goal':
+                    return {
+                        ...stat,
+                        displayText: `${player} ${minute}` + 
+                            (stat.assisted_by_name ? ` (assist: ${stat.assisted_by_name})` : '')
+                    };
+                case 'assist':
+                    return { ...stat, displayText: `Assist by ${player}` };
+                case 'yellow_card':
+                    return { ...stat, displayText: `Yellow card: ${player} ${minute}` };
+                case 'red_card':
+                    return { ...stat, displayText: `Red card: ${player} ${minute}` };
+                case 'substitution':
+                    return { 
+                        ...stat, 
+                        displayText: `Sub: ${player} ↔ ${stat.substituted_for_name || 'Unknown'}`
+                    };
+                default:
+                    return { ...stat, displayText: `${stat.event_type}: ${player}` };
+            }
         });
     };
 
@@ -75,7 +154,7 @@ export default function Results() {
                 <Text style={styles.errorText}>{error}</Text>
                 <TouchableOpacity 
                     style={styles.retryButton}
-                    onPress={() => router.replace('/results')}
+                    onPress={() => window.location.reload()}
                 >
                     <Text style={styles.retryText}>Try Again</Text>
                 </TouchableOpacity>
@@ -85,18 +164,13 @@ export default function Results() {
 
     return (
         <View style={styles.container}>
-            {/* Header with League Title */}
             <View style={styles.header}>
                 <Text style={styles.leagueTitle}>Castle Lager Premier Soccer League</Text>
                 <Text style={styles.seasonTitle}>2024/25 Season Results</Text>
             </View>
 
-            {/* Results Section */}
             <View style={styles.resultsContainer}>
-                <ScrollView 
-                    style={styles.matchesScroll}
-                    showsVerticalScrollIndicator={false}
-                >
+                <ScrollView style={styles.matchesScroll} showsVerticalScrollIndicator={false}>
                     {matches.length === 0 ? (
                         <View style={styles.noMatchesContainer}>
                             <Text style={styles.noMatchesText}>No results available</Text>
@@ -106,17 +180,9 @@ export default function Results() {
                         <>
                             {matches.slice(0, visibleMatches).map((match) => {
                                 const matchDate = new Date(match.match_date);
-                                const fullDate = matchDate.toLocaleDateString([], {
-                                    weekday: 'short',
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric'
-                                });
-                                const time = matchDate.toLocaleTimeString([], {
-                                    hour: '2-digit', 
-                                    minute: '2-digit'
-                                });
-
+                                const dateOptions = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
+                                const timeOptions = { hour: '2-digit', minute: '2-digit' };
+                                
                                 return (
                                     <TouchableOpacity 
                                         key={match.id} 
@@ -124,13 +190,15 @@ export default function Results() {
                                         onPress={() => handleMatchPress(match)}
                                         activeOpacity={0.8}
                                     >
-                                        {/* Match Date */}
                                         <View style={styles.dateContainer}>
-                                            <Text style={styles.dateText}>{fullDate}</Text>
-                                            <Text style={styles.timeText}>{time}</Text>
+                                            <Text style={styles.dateText}>
+                                                {matchDate.toLocaleDateString([], dateOptions)}
+                                            </Text>
+                                            <Text style={styles.timeText}>
+                                                {matchDate.toLocaleTimeString([], timeOptions)}
+                                            </Text>
                                         </View>
 
-                                        {/* Teams and Score */}
                                         <View style={styles.teamsContainer}>
                                             <View style={styles.teamContainer}>
                                                 <Text style={styles.teamName} numberOfLines={1}>
@@ -149,17 +217,23 @@ export default function Results() {
                                             </View>
                                         </View>
 
-                                        {/* Match Events Preview */}
-                                        {match.events && (
+                                        {match.statistics.length > 0 && (
                                             <View style={styles.matchEvents}>
-                                                <Text style={styles.eventsTitle}>Match Events:</Text>
-                                                {match.events.split('|').slice(0, 2).map((event, index) => (
-                                                    <Text key={index} style={styles.eventText}>
-                                                        • {event.trim()}
+                                                <Text style={styles.eventsTitle}>Key Match Events:</Text>
+                                                {formatMatchEvents(match.statistics)
+                                                    .slice(0, 3)
+                                                    .map((event, index) => (
+                                                        <View key={`${match.id}-${index}`} style={styles.eventItem}>
+                                                            {renderEventIcon(event.event_type)}
+                                                            <Text style={styles.eventText} numberOfLines={1}>
+                                                                {event.displayText}
+                                                            </Text>
+                                                        </View>
+                                                    ))}
+                                                {match.statistics.length > 3 && (
+                                                    <Text style={styles.moreEventsText}>
+                                                        + {match.statistics.length - 3} more events
                                                     </Text>
-                                                ))}
-                                                {match.events.split('|').length > 2 && (
-                                                    <Text style={styles.moreEventsText}>+ {match.events.split('|').length - 2} more events</Text>
                                                 )}
                                             </View>
                                         )}
@@ -167,7 +241,6 @@ export default function Results() {
                                 );
                             })}
 
-                            {/* Show More Button */}
                             {visibleMatches < matches.length && (
                                 <TouchableOpacity 
                                     onPress={handleShowMore} 
@@ -182,7 +255,6 @@ export default function Results() {
                 </ScrollView>
             </View>
 
-            {/* Footer Navigation */}
             <View style={styles.footer}>
                 {['Home', 'Table', 'Stats', 'News'].map((item) => (
                     <TouchableOpacity 
