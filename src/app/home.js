@@ -123,8 +123,8 @@ export default function Home() {
 
             {/* Footer Navigation */}
             <View style={styles.footer}>
-                <TouchableOpacity onPress={() => router.push('/latest')}>
-                    <Text style={styles.footerLinkText}>Latest</Text>
+                <TouchableOpacity onPress={() => router.push('/results')}>
+                    <Text style={styles.footerLinkText}>Results</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => router.push('/table')}>
                     <Text style={styles.footerLinkText}>Table</Text>
